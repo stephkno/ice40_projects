@@ -6,6 +6,7 @@ module rgb_fade (
 );
 
   wire int_osc;
+  SB_LFOSC u_SB_LFOSC (.CLKLFPU(1'b1), .CLKLFEN(1'b1), .CLKLF(int_osc));
 
   // clock divider
   reg [31:0] divider;
@@ -20,8 +21,6 @@ module rgb_fade (
 
   // 3 bit color state
   reg [2:0] color;
-
-  SB_LFOSC u_SB_LFOSC (.CLKLFPU(1'b1), .CLKLFEN(1'b1), .CLKLF(int_osc));
   
   initial begin
     red <= 0;

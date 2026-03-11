@@ -42,10 +42,10 @@ module rgb_fade (
     // 255 cycles per color
     // 10k hz base clock / x = 255 cycles
     // 10k hz = 255 cycles * x
-    // x = 10k/255 = 39.215686275
+    // x = 10k/255 = 39.215686275 * 5 = 195
 
     // color fade 
-    if(divider == 39) begin
+    if(divider == 195) begin
 
       divider <= 0;
 

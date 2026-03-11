@@ -2,21 +2,21 @@ module uart (
   output wire led_red,
   output wire led_green,
   output wire led_blue,
-  output wire serial_txd,
+  output reg serial_txd,
   input wire serial_rxd
 );
 
   wire int_osc;
   
-  SB_HFOSC #(.CLKHF_DIV("0b00")) u_SB_HFOSC (.CLKHFPU(1'b1), .CLKHFEN(1'b1), .CLKHF(int_osc));
+  SB_HFOSC #(.CLKHF_DIV("0b11")) u_SB_HFOSC (.CLKHFPU(1'b1), .CLKHFEN(1'b1), .CLKHF(int_osc));
   
   reg [31:0] pwm_counter = 0;
-  reg [31:0] uart_baud_counter = 160000;
+  reg [31:0] uart_baud_counter = 3;
 
   reg [3:0] tx_state = 0;
   reg [3:0] rx_state = 0;
 
-  reg [7:0] uart_data = 0;
+  reg [7:0] uart_data = 32;
 
   reg rx_ready = 0;
 
@@ -25,7 +25,6 @@ module uart (
   reg [7:0] green = 0;
   reg [7:0] blue = 0;
 
-  // 0 = 300, 1 = 600, 2 = 1200, 5 = 9600, 17 = 2m
   reg [4:0] baudrate = 0;
 
   always @(posedge int_osc) begin
@@ -33,46 +32,40 @@ module uart (
     pwm_counter <= pwm_counter + 1;
     uart_baud_counter <= uart_baud_counter - 1;
 
-    // 48,000,000 / 300 baud = 160000
-    if(uart_baud_counter == 0)
-    begin
-
-      // reset counter
-      uart_baud_counter <= 160000;
+    if(uart_baud_counter == 0) begin
       
-      // 1 start bit + 8 data bits + 1 stop bit = 10 bits total
-      if(tx_state == 0 || tx_state == 9) begin
-        
-        // start or end bit
-        serial_txd <= (tx_state == 9);
-        
-        if(tx_state == 9) begin
+      serial_txd <= 1;
+      uart_baud_counter <= 3;
 
-          tx_state <= 0;
-
-          // set output data:
-          // print ascii chars in order
-          if(uart_data == 10)
-            uart_data <= 32;
-          else if(uart_data == 126)
-            uart_data <= 10;
-          else
-            uart_data <= uart_data + 1;
-        
-        // increment tx state
-        end else begin
-          tx_state <= tx_state + 1;
+      case(tx_state)
+        // start bit
+        0: begin
+          serial_txd <= 0;
+          tx_state <= 1;
         end
 
-      // transmit data bits
-      end else if(tx_state > 0 && tx_state < 9) begin
+        // data bits
+        1,2,3,4,5,6,7,8: begin
+          serial_txd <= uart_data[tx_state-1];
+          tx_state <= tx_state + 1;
+        end
+        
+        // stop bit
+        9: begin
 
-        serial_txd <= uart_data[tx_state-1];
-        tx_state <= tx_state + 1;
+            serial_txd <= 1;
+            tx_state <= 0;
 
-      end
+            if(uart_data == 10) uart_data <= 32;
+            else if(uart_data == 126) uart_data <= 10;
+            else uart_data <= uart_data + 1;
+
+        end
+      
+      endcase
 
     end
+
   end
 
   SB_RGBA_DRV RGB_DRIVER (

@@ -1,17 +1,16 @@
-module uart (
-  output wire led_red,
-  output wire led_green,
-  output wire led_blue,
+module uart #(parameter CLOCKRATE = 12000000, parameter BAUDRATE = 2000000) (
   output reg serial_txd,
   input wire serial_rxd
 );
 
-  wire int_osc;
+  localparam BAUDCYCLES = CLOCKRATE / BAUDRATE;
   
-  SB_HFOSC #(.CLKHF_DIV("0b11")) u_SB_HFOSC (.CLKHFPU(1'b1), .CLKHFEN(1'b1), .CLKHF(int_osc));
+  wire int_osc;
+
+  SB_HFOSC #(.CLKHF_DIV("0b10")) u_SB_HFOSC (.CLKHFPU(1'b1), .CLKHFEN(1'b1), .CLKHF(int_osc));
   
   reg [31:0] pwm_counter = 0;
-  reg [31:0] uart_baud_counter = 3;
+  reg [31:0] uart_baud_counter = BAUDCYCLES;
 
   reg [3:0] tx_state = 0;
   reg [3:0] rx_state = 0;
@@ -19,11 +18,6 @@ module uart (
   reg [7:0] uart_data = 32;
 
   reg rx_ready = 0;
-
-  // color values
-  reg [7:0] red = 255;
-  reg [7:0] green = 0;
-  reg [7:0] blue = 0;
 
   reg [4:0] baudrate = 0;
 
@@ -35,7 +29,7 @@ module uart (
     if(uart_baud_counter == 0) begin
       
       serial_txd <= 1;
-      uart_baud_counter <= 3;
+      uart_baud_counter <= BAUDCYCLES;
 
       case(tx_state)
         // start bit
@@ -67,20 +61,5 @@ module uart (
     end
 
   end
-
-  SB_RGBA_DRV RGB_DRIVER (
-    .RGBLEDEN(1'b1),
-    .RGB0PWM (pwm_counter < green),
-    .RGB1PWM (pwm_counter < blue),
-    .RGB2PWM (pwm_counter < red),
-    .CURREN  (1'b1),
-    .RGB0 (led_red),
-    .RGB1 (led_green),
-    .RGB2 (led_blue)
-  );
-
-  defparam RGB_DRIVER.RGB0_CURRENT = "0b00000001";
-  defparam RGB_DRIVER.RGB1_CURRENT = "0b00000001";
-  defparam RGB_DRIVER.RGB2_CURRENT = "0b00000001";
 
 endmodule

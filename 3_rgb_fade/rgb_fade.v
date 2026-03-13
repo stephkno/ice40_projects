@@ -9,7 +9,7 @@ module rgb_fade (
   SB_LFOSC u_SB_LFOSC (.CLKLFPU(1'b1), .CLKLFEN(1'b1), .CLKLF(int_osc));
 
   // clock divider
-  reg [31:0] divider;
+  reg [31:0] divider = 195;
 
   // color values
   reg [7:0] red;
@@ -36,7 +36,7 @@ module rgb_fade (
     counter <= counter + 1;
 
     // clock divider
-    divider <= divider + 1;
+    divider <= divider - 1;
 
     // one color per second:
     // 255 cycles per color
@@ -45,9 +45,9 @@ module rgb_fade (
     // x = 10k/255 = 39.215686275 * 5 = 195
 
     // color fade 
-    if(divider == 195) begin
+    if(divider == 0) begin
 
-      divider <= 0;
+      divider <= 195;
 
       case(color)
 

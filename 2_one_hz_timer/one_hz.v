@@ -2,15 +2,18 @@
 //
 // timing practice: blink one per second
 //
-module rgb_blink (
+module rgb_blink #(parameter CLOCKRATE = 10000, parameter TICKRATE = 1)
+(
   output wire led_red,
   output wire led_blue,
   output wire led_green
 );
 
+  localparam TICKCYCLES = CLOCKRATE / TICKRATE;
+
   wire red, green, blue;
   wire int_osc;
-  reg [15:0] counter;
+  reg [15:0] counter = TICKCYCLES;
 
   SB_LFOSC u_SB_LFOSC (.CLKLFPU(1'b1), .CLKLFEN(1'b1), .CLKLF(int_osc)); 
  
@@ -19,13 +22,14 @@ module rgb_blink (
   // 10 khz base clock 
   always @(posedge int_osc) begin
 
-    counter <= counter + 1;
+    counter <= counter -1;
 
-    // 10,000 hz / 5,000 = 2 hz = 1 hz
-    if(counter == 5000)
+    if(counter == 0)
       begin
+      
         blink_state <= ~blink_state;
-        counter <= 0; 
+        counter <= TICKCYCLES;
+      
       end
 
   end

@@ -1,8 +1,21 @@
-module uart #(parameter CLOCKRATE = 12000000, parameter BAUDRATE = 2000000) (
+// 6551 UART Status Bits
+// ---------------------
+// 0 | Parity error
+// 1 | Framing error
+// 2 | Overrun error
+// 3 | RX Byte Waiting
+// 4 | TX Ready To Send
+// 5 | Data carrier detect
+// 6 | Data set ready
+// 7 | Interrupt request
+
+module uart #(parameter BAUDRATE = 115200)
+(
   output reg serial_txd,
   input wire serial_rxd
 );
 
+  localparam CLOCKRATE = 12000000;
   localparam BAUDCYCLES = CLOCKRATE / BAUDRATE;
   
   wire int_osc;
@@ -18,18 +31,23 @@ module uart #(parameter CLOCKRATE = 12000000, parameter BAUDRATE = 2000000) (
   reg [7:0] uart_data = 32;
 
   reg rx_ready = 0;
-
+  
   reg [4:0] baudrate = 0;
 
+  reg uart_tick = 0;
+  
   always @(posedge int_osc) begin
     
+    uart_tick <= 0;
+
     pwm_counter <= pwm_counter + 1;
     uart_baud_counter <= uart_baud_counter - 1;
-
+    
     if(uart_baud_counter == 0) begin
-      
-      serial_txd <= 1;
+    
       uart_baud_counter <= BAUDCYCLES;
+
+      serial_txd <= 1;
 
       case(tx_state)
         // start bit

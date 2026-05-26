@@ -1,3 +1,14 @@
+// 6551 UART Status Bits
+// ---------------------
+// 0 | Parity error
+// 1 | Framing error
+// 2 | Overrun error
+// 3 | RX Data Register Full  1=full
+// 4 | TX Data Register Empty 1=empty
+// 5 | Data carrier detect
+// 6 | Data set ready
+// 7 | Interrupt request
+
 module uart #(parameter BAUDRATE = 9600) (
   input wire clk,
   input wire rst,
@@ -15,16 +26,6 @@ module uart #(parameter BAUDRATE = 9600) (
   output wire rx_irq
 );
 
-  // 6551 UART Status Bits
-  // ---------------------
-  // 0 | Parity error
-  // 1 | Framing error
-  // 2 | Overrun error
-  // 3 | RX Data Register Full  1=full
-  // 4 | TX Data Register Empty 1=empty
-  // 5 | Data carrier detect
-  // 6 | Data set ready
-  // 7 | Interrupt request
 
   localparam CLOCKRATE = 12000000;
   localparam BAUDCYCLES = CLOCKRATE / BAUDRATE;
@@ -59,9 +60,12 @@ module uart #(parameter BAUDRATE = 9600) (
       rx_state <= 0;
       uart_baud_counter <= BAUDCYCLES;
     
-    // baud tick
+    // on baud tick
     end else if(uart_baud_counter == 0) begin
 
+      // -------- //
+      // Begin TX //
+      // -------- //
       // latch cs
       if (cs) begin
           cs_latched <= 1;
@@ -106,7 +110,11 @@ module uart #(parameter BAUDRATE = 9600) (
 
       endcase
       
-      // detected start bit: begin recieve 
+      // -------- // 
+      // Begin RX //
+      // -------- //
+
+      // detect start bit
       if(rx_state == 0 && serial_rxd == 1 && cs_latched) begin
 
         status[3] <= 0; // set rx ready bit
@@ -121,10 +129,10 @@ module uart #(parameter BAUDRATE = 9600) (
       // stop bit
       end else begin
 
-       // status[3] <= 1; // set rx ready bit
+        // status[3] <= 1; // set rx ready bit
         rx_state <= 0;
 
-      end
+      end 
 
     end
 

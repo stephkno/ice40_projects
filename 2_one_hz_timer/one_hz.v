@@ -1,6 +1,6 @@
 // one_hz.v
 //
-// timing practice: blink one per second
+// timing: blink once per second
 //
 module rgb_blink #(parameter CLOCKRATE = 10000, parameter TICKRATE = 1)
 (
@@ -9,13 +9,18 @@ module rgb_blink #(parameter CLOCKRATE = 10000, parameter TICKRATE = 1)
   output wire led_green
 );
 
+  // find target tick rate in cycles
   localparam TICKCYCLES = CLOCKRATE / TICKRATE;
 
+  // RGB LED signal
   wire red, green, blue;
-  wire int_osc;
+
+  // cycle counter
   reg [15:0] counter = TICKCYCLES;
 
+  // instantiate oscillator block
   SB_LFOSC u_SB_LFOSC (.CLKLFPU(1'b1), .CLKLFEN(1'b1), .CLKLF(int_osc)); 
+  wire int_osc;
  
   assign red = blink_state;
   

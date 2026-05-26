@@ -1,3 +1,5 @@
-**/*.bin
-**/*.asc
-**/*.json
+*/*.bin
+*/*.asc
+*/*.json
+*/*.vcd
+*/*.out

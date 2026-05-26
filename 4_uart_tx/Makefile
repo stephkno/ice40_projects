@@ -17,7 +17,6 @@ uart.json: uart.v
 .PHONY: flash
 flash:
 	sudo iceprog uart.bin
-#sudo iceprog -d i:0x0403:0x6014 uart.bin
 
 .PHONY: clean
 clean:

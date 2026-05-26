@@ -72,7 +72,7 @@ module top (
 
     reg waiting = 0;
     assign red = status[3];
-
+    
     always @(posedge clk) begin
     
         rw <= 0;

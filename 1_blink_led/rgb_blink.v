@@ -6,15 +6,22 @@ module rgb_blink #(parameter CLOCKRATE = 10000, parameter TICKRATE = 100)
   output wire gpio_23
 );
 
+  // find target tick rate in cycles
   localparam TICKCYCLES = CLOCKRATE / TICKRATE;
 
-  wire        int_osc;
+  // clock counter
   reg  [15:0] frequency_counter_i = TICKCYCLES;
+  
+  // pwm intensity
   reg [7:0] fade = 0;
   reg fade_dir = 1;
+
+  // pwm threshold counter
   reg [7:0] pwm_counter = 0;
 
+  // instantiate oscillator block
   SB_LFOSC u_SB_LFOSC (.CLKLFPU(1'b1), .CLKLFEN(1'b1), .CLKLF(int_osc));
+  wire int_osc;
 
   always @(posedge int_osc) begin
 
@@ -24,12 +31,14 @@ module rgb_blink #(parameter CLOCKRATE = 10000, parameter TICKRATE = 100)
     if(frequency_counter_i == 0) begin
       frequency_counter_i <= TICKCYCLES;
 
+      // fade in/out
       if(fade_dir) begin
         fade <= fade + 1;
       end else begin
         fade <= fade - 1;
       end
       
+      // change dir
       if(fade == 254 && fade_dir) fade_dir <= 0;
       if(fade == 1 && !fade_dir) fade_dir <= 1;
       

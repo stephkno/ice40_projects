@@ -34,11 +34,7 @@ module uart #(parameter BAUDRATE = 115200)
   
   reg [4:0] baudrate = 0;
 
-  reg uart_tick = 0;
-  
   always @(posedge int_osc) begin
-    
-    uart_tick <= 0;
 
     pwm_counter <= pwm_counter + 1;
     uart_baud_counter <= uart_baud_counter - 1;

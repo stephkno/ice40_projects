@@ -12,29 +12,10 @@ module top (
     input wire serial_rxd
 );
 
-    defparam RGB_DRIVER.RGB0_CURRENT = "0b00000001";
-    defparam RGB_DRIVER.RGB1_CURRENT = "0b00000001";
-    defparam RGB_DRIVER.RGB2_CURRENT = "0b00000001";
-
-    SB_RGBA_DRV RGB_DRIVER (
-        .RGBLEDEN(1'b1),
-        .RGB0PWM (green),
-        .RGB1PWM (blue),
-        .RGB2PWM (red),
-        .CURREN  (1'b1),
-        .RGB0    (led_green),
-        .RGB1    (led_blue),
-        .RGB2    (led_red)
-    );
-
-    wire red;
-    wire blue;
-    wire green;
-
     reg rst = 1;
 
-    wire clk;
-    SB_HFOSC #(.CLKHF_DIV("0b10")) u_SB_HFOSC (.CLKHFPU(1'b1), .CLKHFEN(1'b1), .CLKHF(clk));    
+    output clk;
+    reg clk = 0;
 
     // test data
     reg [7:0] tx_data = 0;
@@ -43,15 +24,14 @@ module top (
     reg rw = 0;
 
     // echo char data
-    reg [8:0] data = 8'hAB;
+    reg [8:0] data = 8'b01100110;
 
     // wire to read status port
     wire [7:0] status;
     
     // init uart
     uart #(115200) serial_port (
-
-        // ctrl
+        
         .clk (clk),
         .rst (rst),
         .cs (en),
@@ -70,9 +50,20 @@ module top (
     );
 
     reg waiting = 0;
+    reg prev_status = 0;
+
     assign red = status[3];
 
     reg done = 0;
+
+    reg [32:0] t = 0;
+    
+    initial begin
+      
+        #1 clk = 1;
+        forever #41667 clk = ~clk;
+
+    end
 
     always @(posedge clk) begin
         
@@ -80,19 +71,29 @@ module top (
         end
 
         rw <= 0;
-        
+        en <= 0;
+        t <= t + 1;
+
         // on reset
         if(rst) begin
+
+            $display("reset");
     
             rst <= 0;
-            en <= 1;
+            en <= 0;
             tx_data <= 0;
+            
             waiting <= 0;
             done <= 0;
+            prev_status <= 0;
 
         end else begin
+            prev_status <= status[4];
+
             // we are not waiting and rx has data
             if(!waiting && status[3]) begin
+
+                $display("t=%d Wait", t);
                 
                 // read data
                 en <= 1;
@@ -100,7 +101,9 @@ module top (
                 rw <= 1;
                 
             // we are not waiting for tx to finish and uart is ready
-            end else if(!done && !waiting && !status[4]) begin
+            end else if(!done && !waiting && status[4]) begin
+
+                $display("t=%d status[4] = %d", t, serial_port.status[4]);
 
                 // load tx data byte
                 tx_data <= data;
@@ -109,7 +112,9 @@ module top (
                 en <= 1;
                 waiting <= 1;
 
-            end else if(waiting && status[4]) begin
+            end else if(waiting && status[4] && !prev_status) begin
+
+                $display("t=%d done", t);
                 waiting <= 0;
                 en <= 0;
                 done <= 1;
@@ -117,4 +122,5 @@ module top (
             end
         end
     end
+
 endmodule

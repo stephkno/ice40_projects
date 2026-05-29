@@ -116,11 +116,12 @@ module uart #(parameter BAUDRATE = 115200) (
                 serial_txd <= 1;
                 tx_state <= 10;
             end
+
             // idle cycle
             10: begin
                 tx_state <= 0;
                 uart_tx_data <= 0;
-                status[4] <= 1; // free busy status
+                status[4] <= 1; // clear busy flag
                 cs_latched <= 0;
                 rw_latched <= 0;
             end
@@ -132,33 +133,31 @@ module uart #(parameter BAUDRATE = 115200) (
         // Begin RX //
         // -------- //
 
-        // handle tx
-        case(tx_state)
+        // handle rx
+        case(rx_state)
 
-          // start bit
+          // idle
           0: begin
-            serial_txd <= 0;
-            tx_state <= 1;
+            if(serial_rxd == 0) begin
+              rx_state <= 1;
+            end
           end
 
           // data bits
           1,2,3,4,5,6,7,8: begin
-            serial_txd <= uart_tx_data[tx_state-1];
-            tx_state <= tx_state + 1;
+            uart_rx_data[rx_state-1] <= serial_rxd;
+            rx_state <= rx_state + 1;
           end
 
           // stop bit
           9: begin
-              serial_txd <= 1;
-              tx_state <= 10;
+              rx_state <= 10;
           end
+
           // idle cycle
           10: begin
-              tx_state <= 0;
-              uart_tx_data <= 0;
-              status[4] <= 1; // free busy status
-              cs_latched <= 0;
-              rw_latched <= 0;
+              rx_state <= 0;
+              status[3] <= 1; // data avail
           end
 
         endcase

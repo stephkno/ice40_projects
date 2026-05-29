@@ -39,7 +39,6 @@ module rgb_blink #(parameter CLOCKRATE = 10000, parameter TICKRATE = 1)
 
   end
   
-  
   SB_RGBA_DRV RGB_DRIVER (
     .RGBLEDEN(1'b1),
     .RGB0PWM (green),

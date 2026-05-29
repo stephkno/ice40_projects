@@ -20,8 +20,8 @@ module uart #(parameter BAUDRATE = 115200) (
   input wire rw,
   output wire rx_irq,
   output reg [7:0] status,
-
-  // uart -> FTDI
+  
+  // uart -> FTDI 
   output reg serial_txd,
   input wire serial_rxd, 
 
@@ -48,6 +48,7 @@ module uart #(parameter BAUDRATE = 115200) (
 
   reg cs_latched = 0;
   reg rw_latched = 0;
+  reg prev_serial_rxd = 0;
 
   assign rx_irq = status[3];
   
@@ -71,16 +72,26 @@ module uart #(parameter BAUDRATE = 115200) (
       
       // latch cs
       if (cs) begin
+
           cs_latched <= 1;
           rw_latched <= rw;
           
           if(status[4] && cs && !rw) begin
-            $display("t=%d Load data reg data=%b", t, tx_data);
+
+            $display("t=%d Write data reg data=%b", t, tx_data);
             uart_tx_data <= tx_data;
             status[4] <= 0; // set busy status
-          end
-      end
+
+          end else if(status[3] && cs && rw) begin
+
+            $display("t=%d Read data reg data=%b", t, rx_data);
+            rx_data <= 0;
+            status[3] <= 0;
             
+          end
+
+      end
+      
       // on baud tick
       if(uart_baud_counter == 0) begin
 
@@ -93,6 +104,7 @@ module uart #(parameter BAUDRATE = 115200) (
 
         // reset baud counter
         uart_baud_counter <= BAUDCYCLES;
+        prev_serial_rxd <= serial_rxd;
         
         if(!rw_latched && cs_latched) begin
 
@@ -120,7 +132,6 @@ module uart #(parameter BAUDRATE = 115200) (
             // idle cycle
             10: begin
                 tx_state <= 0;
-                uart_tx_data <= 0;
                 status[4] <= 1; // clear busy flag
                 cs_latched <= 0;
                 rw_latched <= 0;
@@ -133,14 +144,18 @@ module uart #(parameter BAUDRATE = 115200) (
         // Begin RX //
         // -------- //
 
+        $display(" rst=%b | cs=%b rw=%b | tx_state=%d rx_state=%d | cs_latched=%b rw_latched=%b status[4]=%b | uart_rx_data=%b serial_rxd=%b | T=%d |",
+              rst, cs, rw, tx_state, rx_state, cs_latched, rw_latched, status[4], uart_rx_data, serial_rxd, t);
+
         // handle rx
         case(rx_state)
 
           // idle
           0: begin
-            if(serial_rxd == 0) begin
+            if(serial_rxd == 0 && prev_serial_rxd == 1) begin
               rx_state <= 1;
             end
+
           end
 
           // data bits
@@ -151,13 +166,14 @@ module uart #(parameter BAUDRATE = 115200) (
 
           // stop bit
           9: begin
-              rx_state <= 10;
+            rx_state <= rx_state + 1;
           end
 
           // idle cycle
           10: begin
               rx_state <= 0;
               status[3] <= 1; // data avail
+              rx_data <= uart_rx_data;
           end
 
         endcase

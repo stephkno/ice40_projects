@@ -11,4 +11,4 @@ flash:
 	sudo iceprog top.bin
 
 clean:
-	$(RM) -f top.json top.asc top.bin
+	$(RM) -f *.json *.asc *.bin *.vcd

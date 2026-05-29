@@ -31,19 +31,23 @@ module top (
     wire blue;
     wire green;
 
+    assign red = status[3];
+    assign green = status[4];
+    
+    reg [7:0] tx_data;
+    reg [7:0] rx_data;
+
     reg rst = 1;
 
     wire clk;
+
     SB_HFOSC #(.CLKHF_DIV("0b10")) u_SB_HFOSC (.CLKHFPU(1'b1), .CLKHFEN(1'b1), .CLKHF(clk));    
 
-    // test data
-    reg [7:0] tx_data = 0;
-    wire [7:0] rx_data;
     reg en = 0;
     reg rw = 0;
 
     // echo char data
-    reg [8:0] data = 8'hAB;
+    reg [8:0] data = 0;
 
     // wire to read status port
     wire [7:0] status;
@@ -55,6 +59,7 @@ module top (
         .clk (clk),
         .rst (rst),
         .cs (en),
+
         .rw (rw),
         .rx_irq (),
         .status (status),
@@ -69,52 +74,68 @@ module top (
 
     );
 
-    reg waiting = 0;
-    assign red = status[3];
-
-    reg done = 0;
+    reg [3:0] uart_driver_state = 0;
+    // 0 = WAIT
+    // 1 = READ
+    // 2 = ECHO
 
     always @(posedge clk) begin
         
-        if(done == 1) begin
-        end
-
         rw <= 0;
+        en <= 0;
         
         // on reset
         if(rst) begin
     
             rst <= 0;
-            en <= 1;
-            tx_data <= 0;
-            waiting <= 0;
-            done <= 0;
+            en <= 0;
+            data <= 0;
 
         end else begin
+
             // we are not waiting and rx has data
-            if(!waiting && status[3]) begin
+            case (uart_driver_state)
+
+                0: begin
+
+                    if(status[3]) begin
+                        
+                        uart_driver_state <= 1;
+                        rw <= 1;
+                        en <= 1;
+
+                    end
+
+                end
+
+                // read data from rx
+                1: begin
+
+                    // load rx data byte
+                    data <= rx_data;
+                    en <= 0;
+                    rw <= 1;
+                    uart_driver_state <= 2;
+
+                end
+
+                // write back data
+                2: begin
+
+                    if(status[4]) begin
+                        en <= 1;
+                        rw <= 0;
+
+                        tx_data <= data;
+                        uart_driver_state <= 0;
+                    end
                 
-                // read data
-                en <= 1;
-                data <= rx_data;
-                rw <= 1;
-                
-            // we are not waiting for tx to finish and uart is ready
-            end else if(!done && !waiting && !status[4]) begin
-
-                // load tx data byte
-                tx_data <= data;
-
-                // enable tx
-                en <= 1;
-                waiting <= 1;
-
-            end else if(waiting && status[4]) begin
-                waiting <= 0;
-                en <= 0;
-                done <= 1;
+                end
             
-            end
+            endcase
+
         end
+
     end
+
 endmodule

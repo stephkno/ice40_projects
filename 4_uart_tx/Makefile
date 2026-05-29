@@ -20,4 +20,4 @@ flash:
 
 .PHONY: clean
 clean:
-	$(RM) -f uart.json uart.asc uart.bin
+	$(RM) -f *.json *.asc *.bin

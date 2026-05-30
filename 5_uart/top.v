@@ -31,27 +31,31 @@ module top (
     wire blue;
     wire green;
 
-    assign red = status[3];
-    assign green = status[4];
-    
-    reg [7:0] tx_data;
-    reg [7:0] rx_data;
+    reg [2:0] color = 0;
 
+    assign red = echo[0];
+    assign green = echo[1];
+    assign blue = echo[2];
+ 
     reg rst = 1;
 
     wire clk;
 
-    SB_HFOSC #(.CLKHF_DIV("0b10")) u_SB_HFOSC (.CLKHFPU(1'b1), .CLKHFEN(1'b1), .CLKHF(clk));    
+    SB_HFOSC #(.CLKHF_DIV("0b10")) u_SB_HFOSC (.CLKHFPU(1'b1), .CLKHFEN(1'b1), .CLKHF(clk));
 
     reg en = 0;
     reg rw = 0;
 
-    // echo char data
-    reg [8:0] data = 0;
+    // data port
+    wire [7:0] data;
+    wire uart_oe = cs && rw;
+    assign data = uart_oe ? echo : 8'bz;
 
-    // wire to read status port
-    wire [7:0] status;
+    // echo char data
+    reg [7:0] echo = 0;
     
+    wire [7:0] status;
+
     // init uart
     uart #(115200) serial_port (
 
@@ -69,8 +73,7 @@ module top (
         .serial_rxd (serial_rxd),
 
         // uart -> cpu
-        .tx_data (tx_data),
-        .rx_data (rx_data)
+        .data (data)
 
     );
 
@@ -89,7 +92,7 @@ module top (
     
             rst <= 0;
             en <= 0;
-            data <= 0;
+            color <= 0;
 
         end else begin
 
@@ -103,6 +106,7 @@ module top (
                         uart_driver_state <= 1;
                         rw <= 1;
                         en <= 1;
+                        color <= 1;
 
                     end
 
@@ -112,10 +116,10 @@ module top (
                 1: begin
 
                     // load rx data byte
-                    data <= rx_data;
-                    en <= 0;
-                    rw <= 1;
                     uart_driver_state <= 2;
+                    echo <= data;
+                    rw <= 1;
+                    color <= 2;
 
                 end
 
@@ -123,11 +127,12 @@ module top (
                 2: begin
 
                     if(status[4]) begin
-                        en <= 1;
-                        rw <= 0;
 
-                        tx_data <= data;
+                        en <= 1;
+                        color <= 3;
+
                         uart_driver_state <= 0;
+
                     end
                 
                 end
